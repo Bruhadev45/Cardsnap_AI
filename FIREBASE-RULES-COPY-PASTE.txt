@@ -1,0 +1,29 @@
+============================================
+COPY THESE EXACT FIREBASE STORAGE RULES
+============================================
+
+rules_version = '2';
+
+service firebase.storage {
+  match /b/{bucket}/o {
+    match /contacts/{userId}/{contactId}/{imageName} {
+      allow read: if request.auth != null && request.auth.uid == userId;
+      allow write: if request.auth != null && request.auth.uid == userId;
+    }
+  }
+}
+
+============================================
+HOW TO APPLY THESE RULES:
+============================================
+
+1. Go to: https://console.firebase.google.com/
+2. Select your CardSnap project
+3. Click "Storage" in left sidebar
+4. Click "Rules" tab at the top
+5. DELETE everything in the editor
+6. COPY the rules above (lines 7-14)
+7. PASTE into the Firebase rules editor
+8. Click "Publish" button
+
+============================================

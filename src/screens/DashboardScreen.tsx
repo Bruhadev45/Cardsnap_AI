@@ -25,6 +25,10 @@ import {
   Download,
   Bot,
   UserPlus,
+  ArrowUpDown,
+  Filter,
+  X,
+  ChevronDown,
 } from 'lucide-react-native';
 import { Contact } from '../types';
 import { exportToExcel, exportToCSV, exportToVCard } from '../services/exportService';
@@ -64,6 +68,8 @@ const getInitials = (name: string) => {
     .toUpperCase();
 };
 
+type SortOption = 'name-asc' | 'name-desc' | 'company-asc' | 'company-desc' | 'date-newest' | 'date-oldest';
+
 export const DashboardScreen: React.FC<DashboardScreenProps> = ({
   contacts,
   onScanClick,
@@ -73,6 +79,10 @@ export const DashboardScreen: React.FC<DashboardScreenProps> = ({
 }) => {
   const [searchTerm, setSearchTerm] = useState('');
   const [expandedContact, setExpandedContact] = useState<string | null>(null);
+  const [sortBy, setSortBy] = useState<SortOption>('date-newest');
+  const [showSortMenu, setShowSortMenu] = useState(false);
+  const [showFilterMenu, setShowFilterMenu] = useState(false);
+  const [selectedCompanies, setSelectedCompanies] = useState<string[]>([]);
 
   const handleExport = () => {
     if (contacts.length === 0) {
@@ -127,13 +137,77 @@ export const DashboardScreen: React.FC<DashboardScreenProps> = ({
     }
   };
 
-  const filteredContacts = contacts.filter((c) => {
+  // Get unique companies for filter
+  const uniqueCompanies = Array.from(
+    new Set(contacts.map((c) => c.company).filter((c) => c && c.trim() !== ''))
+  ).sort();
+
+  // Toggle company filter
+  const toggleCompanyFilter = (company: string) => {
+    setSelectedCompanies((prev) =>
+      prev.includes(company)
+        ? prev.filter((c) => c !== company)
+        : [...prev, company]
+    );
+  };
+
+  // Clear all filters
+  const clearFilters = () => {
+    setSelectedCompanies([]);
+    setSearchTerm('');
+  };
+
+  // Get sort label
+  const getSortLabel = (option: SortOption): string => {
+    switch (option) {
+      case 'name-asc': return 'Name (A-Z)';
+      case 'name-desc': return 'Name (Z-A)';
+      case 'company-asc': return 'Company (A-Z)';
+      case 'company-desc': return 'Company (Z-A)';
+      case 'date-newest': return 'Newest First';
+      case 'date-oldest': return 'Oldest First';
+    }
+  };
+
+  // Filter contacts
+  let filteredContacts = contacts.filter((c) => {
     const term = searchTerm.toLowerCase();
-    return (
+
+    // Search filter
+    const matchesSearch =
+      !term ||
       (c.fullName || '').toLowerCase().includes(term) ||
       (c.company || '').toLowerCase().includes(term) ||
-      (c.jobTitle || '').toLowerCase().includes(term)
-    );
+      (c.jobTitle || '').toLowerCase().includes(term) ||
+      (c.email || '').toLowerCase().includes(term) ||
+      (c.phone || '').toLowerCase().includes(term);
+
+    // Company filter
+    const matchesCompany =
+      selectedCompanies.length === 0 ||
+      (c.company && selectedCompanies.includes(c.company));
+
+    return matchesSearch && matchesCompany;
+  });
+
+  // Sort contacts
+  filteredContacts = [...filteredContacts].sort((a, b) => {
+    switch (sortBy) {
+      case 'name-asc':
+        return (a.fullName || '').localeCompare(b.fullName || '');
+      case 'name-desc':
+        return (b.fullName || '').localeCompare(a.fullName || '');
+      case 'company-asc':
+        return (a.company || '').localeCompare(b.company || '');
+      case 'company-desc':
+        return (b.company || '').localeCompare(a.company || '');
+      case 'date-newest':
+        return new Date(b.scannedAt).getTime() - new Date(a.scannedAt).getTime();
+      case 'date-oldest':
+        return new Date(a.scannedAt).getTime() - new Date(b.scannedAt).getTime();
+      default:
+        return 0;
+    }
   });
 
   const handleDelete = (id: string, name: string) => {
@@ -287,7 +361,108 @@ export const DashboardScreen: React.FC<DashboardScreenProps> = ({
           value={searchTerm}
           onChangeText={setSearchTerm}
         />
+        {searchTerm !== '' && (
+          <TouchableOpacity onPress={() => setSearchTerm('')}>
+            <X size={20} color="#64748B" />
+          </TouchableOpacity>
+        )}
       </View>
+
+      {/* Sort and Filter Bar */}
+      <View style={styles.filterBar}>
+        <View style={styles.filterLeft}>
+          <TouchableOpacity
+            style={styles.filterButton}
+            onPress={() => {
+              setShowSortMenu(!showSortMenu);
+              setShowFilterMenu(false);
+            }}
+          >
+            <ArrowUpDown size={16} color="#4F46E5" />
+            <Text style={styles.filterButtonText}>{getSortLabel(sortBy)}</Text>
+            <ChevronDown size={16} color="#4F46E5" />
+          </TouchableOpacity>
+
+          <TouchableOpacity
+            style={[
+              styles.filterButton,
+              selectedCompanies.length > 0 && styles.filterButtonActive
+            ]}
+            onPress={() => {
+              setShowFilterMenu(!showFilterMenu);
+              setShowSortMenu(false);
+            }}
+          >
+            <Filter size={16} color={selectedCompanies.length > 0 ? '#FFF' : '#4F46E5'} />
+            <Text style={[
+              styles.filterButtonText,
+              selectedCompanies.length > 0 && styles.filterButtonTextActive
+            ]}>
+              Filter{selectedCompanies.length > 0 ? ` (${selectedCompanies.length})` : ''}
+            </Text>
+          </TouchableOpacity>
+        </View>
+
+        {(selectedCompanies.length > 0 || searchTerm) && (
+          <TouchableOpacity onPress={clearFilters} style={styles.clearButton}>
+            <Text style={styles.clearButtonText}>Clear All</Text>
+          </TouchableOpacity>
+        )}
+      </View>
+
+      {/* Sort Menu */}
+      {showSortMenu && (
+        <View style={styles.dropdownMenu}>
+          {(['name-asc', 'name-desc', 'company-asc', 'company-desc', 'date-newest', 'date-oldest'] as SortOption[]).map((option) => (
+            <TouchableOpacity
+              key={option}
+              style={[
+                styles.dropdownItem,
+                sortBy === option && styles.dropdownItemActive
+              ]}
+              onPress={() => {
+                setSortBy(option);
+                setShowSortMenu(false);
+              }}
+            >
+              <Text style={[
+                styles.dropdownItemText,
+                sortBy === option && styles.dropdownItemTextActive
+              ]}>
+                {getSortLabel(option)}
+              </Text>
+            </TouchableOpacity>
+          ))}
+        </View>
+      )}
+
+      {/* Filter Menu */}
+      {showFilterMenu && (
+        <View style={styles.dropdownMenu}>
+          <Text style={styles.filterMenuTitle}>Filter by Company</Text>
+          {uniqueCompanies.length === 0 ? (
+            <Text style={styles.noCompaniesText}>No companies to filter</Text>
+          ) : (
+            uniqueCompanies.map((company) => (
+              <TouchableOpacity
+                key={company}
+                style={styles.checkboxItem}
+                onPress={() => toggleCompanyFilter(company)}
+              >
+                <View style={[
+                  styles.checkbox,
+                  selectedCompanies.includes(company) && styles.checkboxChecked
+                ]}>
+                  {selectedCompanies.includes(company) && (
+                    <View style={styles.checkboxInner} />
+                  )}
+                </View>
+                <Text style={styles.checkboxLabel}>{company}</Text>
+              </TouchableOpacity>
+            ))
+          )}
+        </View>
+      )}
 
       {/* Contacts List */}
       {filteredContacts.length === 0 ? (
@@ -388,6 +563,121 @@ const styles = StyleSheet.create({
     flex: 1,
     fontSize: 16,
     color: '#0F172A',
+  },
+  filterBar: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    paddingHorizontal: 20,
+    marginBottom: 12,
+  },
+  filterLeft: {
+    flexDirection: 'row',
+    gap: 8,
+  },
+  filterButton: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: '#F1F5F9',
+    paddingHorizontal: 12,
+    paddingVertical: 8,
+    borderRadius: 8,
+    gap: 6,
+  },
+  filterButtonActive: {
+    backgroundColor: '#4F46E5',
+  },
+  filterButtonText: {
+    fontSize: 13,
+    fontWeight: '600',
+    color: '#4F46E5',
+  },
+  filterButtonTextActive: {
+    color: '#FFF',
+  },
+  clearButton: {
+    paddingHorizontal: 12,
+    paddingVertical: 8,
+  },
+  clearButtonText: {
+    fontSize: 13,
+    fontWeight: '600',
+    color: '#EF4444',
+  },
+  dropdownMenu: {
+    backgroundColor: '#FFF',
+    marginHorizontal: 20,
+    marginBottom: 12,
+    borderRadius: 12,
+    padding: 8,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.1,
+    shadowRadius: 8,
+    elevation: 4,
+  },
+  dropdownItem: {
+    paddingVertical: 12,
+    paddingHorizontal: 12,
+    borderRadius: 8,
+  },
+  dropdownItemActive: {
+    backgroundColor: '#EEF2FF',
+  },
+  dropdownItemText: {
+    fontSize: 14,
+    color: '#475569',
+  },
+  dropdownItemTextActive: {
+    color: '#4F46E5',
+    fontWeight: '600',
+  },
+  filterMenuTitle: {
+    fontSize: 12,
+    fontWeight: '600',
+    color: '#64748B',
+    textTransform: 'uppercase',
+    paddingHorizontal: 12,
+    paddingTop: 4,
+    paddingBottom: 8,
+  },
+  noCompaniesText: {
+    fontSize: 14,
+    color: '#94A3B8',
+    paddingVertical: 16,
+    paddingHorizontal: 12,
+    textAlign: 'center',
+  },
+  checkboxItem: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    paddingVertical: 10,
+    paddingHorizontal: 12,
+    gap: 12,
+  },
+  checkbox: {
+    width: 20,
+    height: 20,
+    borderRadius: 4,
+    borderWidth: 2,
+    borderColor: '#CBD5E1',
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  checkboxChecked: {
+    borderColor: '#4F46E5',
+    backgroundColor: '#4F46E5',
+  },
+  checkboxInner: {
+    width: 10,
+    height: 10,
+    borderRadius: 2,
+    backgroundColor: '#FFF',
+  },
+  checkboxLabel: {
+    fontSize: 14,
+    color: '#0F172A',
+    flex: 1,
   },
   listContent: {
     paddingHorizontal: 20,

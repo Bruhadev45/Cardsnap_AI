@@ -1,4 +1,4 @@
-import * as FileSystem from 'expo-file-system/legacy';
+import { Paths, File } from 'expo-file-system';
 import * as Sharing from 'expo-sharing';
 import { Contact } from '../types';
 
@@ -28,13 +28,13 @@ export const exportToCSV = async (contacts: Contact[]): Promise<void> => {
 
     // Save to file
     const fileName = `CardSnap_Contacts_${new Date().toISOString().split('T')[0]}.csv`;
-    const fileUri = FileSystem.documentDirectory + fileName;
+    const file = new File(Paths.document, fileName);
 
-    await FileSystem.writeAsStringAsync(fileUri, csvContent);
+    await file.write(csvContent);
 
     // Share the file
     if (await Sharing.isAvailableAsync()) {
-      await Sharing.shareAsync(fileUri, {
+      await Sharing.shareAsync(file.uri, {
         mimeType: 'text/csv',
         dialogTitle: 'Export Contacts',
         UTI: 'public.comma-separated-values-text',
@@ -76,13 +76,13 @@ export const exportToExcel = async (contacts: Contact[]): Promise<void> => {
 
     // Save to file
     const fileName = `CardSnap_Contacts_${new Date().toISOString().split('T')[0]}.csv`;
-    const fileUri = FileSystem.documentDirectory + fileName;
+    const file = new File(Paths.document, fileName);
 
-    await FileSystem.writeAsStringAsync(fileUri, contentWithBom);
+    await file.write(contentWithBom);
 
     // Share the file
     if (await Sharing.isAvailableAsync()) {
-      await Sharing.shareAsync(fileUri, {
+      await Sharing.shareAsync(file.uri, {
         mimeType: 'text/csv',
         dialogTitle: 'Export to Excel',
         UTI: 'public.comma-separated-values-text',
@@ -111,12 +111,12 @@ export const exportToVCard = async (contact: Contact): Promise<void> => {
     ].filter(line => line).join('\n');
 
     const fileName = `${contact.fullName.replace(/[^a-zA-Z0-9]/g, '_')}.vcf`;
-    const fileUri = FileSystem.documentDirectory + fileName;
+    const file = new File(Paths.document, fileName);
 
-    await FileSystem.writeAsStringAsync(fileUri, vcard);
+    await file.write(vcard);
 
     if (await Sharing.isAvailableAsync()) {
-      await Sharing.shareAsync(fileUri, {
+      await Sharing.shareAsync(file.uri, {
         mimeType: 'text/vcard',
         dialogTitle: 'Save Contact',
         UTI: 'public.vcard',

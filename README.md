@@ -5,13 +5,15 @@ A React Native mobile application for scanning business cards using AI, built wi
 ## Features
 
 - 📸 **Camera-based business card scanning** - Capture front and back of business cards
-- 🤖 **AI-powered OCR** - Extract contact information using OpenAI GPT-4o with vision capabilities
-- ☁️ **Cloud Storage** - Firebase Firestore for contact data and Firebase Authentication for users
+- 🤖 **AI-powered OCR** - Extract contact information using Gemini 2.0 Flash via FastRouter
+- ☁️ **Cloud Storage** - Firebase Firestore for contact data (no images stored)
 - 🔐 **User Authentication** - Secure email/password authentication
 - 💬 **AI Assistant** - Intelligent chatbot with knowledge of your contacts and web search capabilities
+- 🔍 **Advanced Search** - Multi-field search (name, company, email, phone, job title)
+- 🔀 **Smart Sorting** - Sort by name, company, or date (6 options)
+- 🏢 **Company Filtering** - Filter contacts by company with multi-select
 - 📤 **Export Contacts** - Export to CSV, Excel, or VCard formats
 - 📞 **Quick Actions** - Call, email, or add contacts to phone directly
-- 🔍 **Search & Filter** - Find contacts instantly
 - ⚠️ **Duplicate Detection** - Prevents saving duplicate contacts
 - 📱 **Cross-Platform** - Works on both iOS and Android
 
@@ -155,10 +157,17 @@ mobile-app/
 - **Quick Actions**: Tap phone to call, tap email to compose
 
 ### 4. Cloud Sync
-- All contacts stored in Firebase Firestore
+- Contact data stored in Firebase Firestore (names, emails, phones, etc.)
+- Images NOT stored in cloud (used only for OCR, then discarded)
 - Secure user authentication
 - Data isolated per user
 - Real-time sync across devices
+
+### 5. Search, Sort & Filter
+- **Search**: Multi-field instant search (name, company, email, phone, job title)
+- **Sort**: 6 sorting options (Name A-Z/Z-A, Company A-Z/Z-A, Date Newest/Oldest)
+- **Filter**: Filter by company with checkbox selection
+- **Clear All**: Quick reset of all filters and search
 
 ## Building for Production
 
@@ -250,7 +259,18 @@ The app requires camera permissions configured in `app.json`:
 - Verify Firebase config is correct in `.env`
 - Ensure Email/Password auth is enabled in Firebase Console
 - Check Firestore database is created
-- Review security rules in Firebase Console
+- **Important**: Update Firestore Database rules:
+  ```javascript
+  rules_version = '2';
+  service cloud.firestore {
+    match /databases/{database}/documents {
+      match /{document=**} {
+        allow read, write: if request.auth != null;
+      }
+    }
+  }
+  ```
+- Firebase Storage NOT needed (images not stored)
 - Restart Expo server after updating `.env`
 
 ### Environment variables not loading

@@ -27,14 +27,19 @@ const removeUndefinedFields = (obj: any): any => {
   return cleaned;
 };
 
-// Save or update contact
+// Save or update contact (without images - images not stored in cloud)
 export const saveContact = async (contact: Contact): Promise<void> => {
   try {
     const user = getCurrentUser();
     if (!user) throw new Error('User not logged in');
 
+    console.log('Saving contact to Firestore (without images)...');
+
+    // Don't store images in Firestore - just contact data
     const contactWithUser = {
       ...contact,
+      frontImage: '', // Don't store images
+      backImage: '', // Don't store images
       userId: user.id,
       scannedAt: contact.scannedAt || new Date().toISOString(),
     };
@@ -46,20 +51,25 @@ export const saveContact = async (contact: Contact): Promise<void> => {
       doc(db, CONTACTS_COLLECTION, contact.id),
       cleanedContact
     );
+
+    console.log('✅ Contact saved to Firestore successfully (contact data only)');
   } catch (error: any) {
     console.error('Save error:', error);
-    throw new Error('Failed to save contact');
+    throw new Error('Failed to save contact: ' + error.message);
   }
 };
 
-// Update contact
+// Update contact (without images)
 export const updateContact = async (contact: Contact): Promise<void> => {
   try {
     const user = getCurrentUser();
     if (!user) throw new Error('User not logged in');
 
+    // Don't store images - just contact data
     const contactWithUser = {
       ...contact,
+      frontImage: '', // Don't store images
+      backImage: '', // Don't store images
       userId: user.id,
     };
 
@@ -70,6 +80,8 @@ export const updateContact = async (contact: Contact): Promise<void> => {
       doc(db, CONTACTS_COLLECTION, contact.id),
       cleanedContact
     );
+
+    console.log('✅ Contact updated in Firestore');
   } catch (error: any) {
     console.error('Update error:', error);
     throw new Error('Failed to update contact');
@@ -109,7 +121,9 @@ export const getContacts = async (): Promise<Contact[]> => {
 // Delete contact
 export const deleteContact = async (id: string): Promise<void> => {
   try {
+    // Delete contact document from Firestore (no images to delete)
     await deleteDoc(doc(db, CONTACTS_COLLECTION, id));
+    console.log('✅ Contact deleted from Firestore');
   } catch (error: any) {
     console.error('Delete error:', error);
     throw new Error('Failed to delete contact');
