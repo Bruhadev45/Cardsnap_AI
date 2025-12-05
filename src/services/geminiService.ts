@@ -125,6 +125,30 @@ export const extractContactFromImage = async (
   throw new Error(lastError?.response?.data?.error?.message || lastError?.message || "Failed to extract contact info - all models unavailable");
 };
 
+// Helper function to clean LaTeX and markdown formatting
+const cleanFormattedText = (text: string): string => {
+  return text
+    // Remove LaTeX math delimiters
+    .replace(/\$\$([^$]+)\$\$/g, '$1')
+    .replace(/\$([^$]+)\$/g, '$1')
+    // Remove LaTeX commands
+    .replace(/\\[a-zA-Z]+\{([^}]+)\}/g, '$1')
+    .replace(/\\[a-zA-Z]+/g, '')
+    // Clean up markdown bold/italic
+    .replace(/\*\*([^*]+)\*\*/g, '$1')
+    .replace(/\*([^*]+)\*/g, '$1')
+    .replace(/__([^_]+)__/g, '$1')
+    .replace(/_([^_]+)_/g, '$1')
+    // Clean up markdown headers
+    .replace(/^#{1,6}\s+/gm, '')
+    // Clean up code blocks
+    .replace(/```[a-z]*\n?/g, '')
+    .replace(/`([^`]+)`/g, '$1')
+    // Clean up extra whitespace
+    .replace(/\n{3,}/g, '\n\n')
+    .trim();
+};
+
 export const askAssistant = async (query: string, contacts: Contact[]): Promise<string> => {
   const contactContext = contacts.map(c => ({
     name: c.fullName,
@@ -155,6 +179,14 @@ ${JSON.stringify(contactContext, null, 2)}
 3. For questions beyond the contact data, use your general knowledge and web search capabilities to provide accurate, up-to-date information
 4. Help with business-related queries, industry information, company details, etc.
 
+**IMPORTANT FORMATTING RULES:**
+- Use PLAIN TEXT only - NO markdown, NO LaTeX, NO special formatting
+- Use simple bullet points with dashes (-)
+- Use simple numbering (1., 2., 3.)
+- NO bold, italic, or code formatting
+- NO mathematical notation or LaTeX syntax
+- Write naturally as if texting a colleague
+
 **Instructions:**
 - When asked about contacts, search through the contact database provided
 - For general knowledge questions, provide accurate information using web search if needed
@@ -171,7 +203,10 @@ ${JSON.stringify(contactContext, null, 2)}
       max_tokens: 800,
     });
 
-    return completion.choices[0].message.content || "I couldn't generate a response.";
+    const rawResponse = completion.choices[0].message.content || "I couldn't generate a response.";
+    
+    // Clean any formatting that might have slipped through
+    return cleanFormattedText(rawResponse);
   } catch (e: any) {
     console.error("Failed to get assistant response", e);
     return "Sorry, I couldn't process your request. Please try again.";
