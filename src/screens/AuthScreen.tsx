@@ -9,9 +9,10 @@ import {
   KeyboardAvoidingView,
   Platform,
   ScrollView,
+  Alert,
 } from 'react-native';
-import { Lock, Mail, ArrowRight, User } from 'lucide-react-native';
-import { login, register } from '../services/firebaseAuthService';
+import { Lock, Mail, ArrowRight, User, Phone } from 'lucide-react-native';
+import { login, register, signInWithGoogle } from '../services/firebaseAuthService';
 
 interface AuthScreenProps {
   onSuccess: () => void;
@@ -19,13 +20,15 @@ interface AuthScreenProps {
 
 export const AuthScreen: React.FC<AuthScreenProps> = ({ onSuccess }) => {
   const [isLogin, setIsLogin] = useState(true);
+  const [authMethod, setAuthMethod] = useState<'email' | 'phone'>('email');
   const [name, setName] = useState('');
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
+  const [phoneNumber, setPhoneNumber] = useState('');
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
-  const handleSubmit = async () => {
+  const handleEmailSubmit = async () => {
     setIsLoading(true);
     setError(null);
 
@@ -40,6 +43,27 @@ export const AuthScreen: React.FC<AuthScreenProps> = ({ onSuccess }) => {
       setError(err.message || 'Authentication failed');
       setIsLoading(false);
     }
+  };
+
+  const handleGoogleSignIn = async () => {
+    setIsLoading(true);
+    setError(null);
+
+    try {
+      await signInWithGoogle();
+      onSuccess();
+    } catch (err: any) {
+      setError(err.message || 'Google Sign-In failed');
+      setIsLoading(false);
+    }
+  };
+
+  const handlePhoneSignIn = async () => {
+    Alert.alert(
+      'Phone Authentication',
+      'Phone authentication requires additional setup. Please use Email or Google Sign-In for now.',
+      [{ text: 'OK' }]
+    );
   };
 
   return (
@@ -108,7 +132,7 @@ export const AuthScreen: React.FC<AuthScreenProps> = ({ onSuccess }) => {
 
           <TouchableOpacity
             style={styles.submitButton}
-            onPress={handleSubmit}
+            onPress={handleEmailSubmit}
             disabled={isLoading}
           >
             {isLoading ? (
@@ -121,6 +145,36 @@ export const AuthScreen: React.FC<AuthScreenProps> = ({ onSuccess }) => {
                 <ArrowRight size={20} color="#0F172A" />
               </View>
             )}
+          </TouchableOpacity>
+
+          <View style={styles.divider}>
+            <View style={styles.dividerLine} />
+            <Text style={styles.dividerText}>OR</Text>
+            <View style={styles.dividerLine} />
+          </View>
+
+          {/* Google Sign-In Button */}
+          <TouchableOpacity
+            style={styles.socialButton}
+            onPress={handleGoogleSignIn}
+            disabled={isLoading}
+          >
+            <View style={styles.socialButtonContent}>
+              <Text style={styles.googleIcon}>G</Text>
+              <Text style={styles.socialButtonText}>Continue with Google</Text>
+            </View>
+          </TouchableOpacity>
+
+          {/* Phone Sign-In Button */}
+          <TouchableOpacity
+            style={styles.socialButton}
+            onPress={handlePhoneSignIn}
+            disabled={isLoading}
+          >
+            <View style={styles.socialButtonContent}>
+              <Phone size={20} color="#FFF" />
+              <Text style={styles.socialButtonText}>Continue with Phone</Text>
+            </View>
           </TouchableOpacity>
 
           <TouchableOpacity
@@ -238,5 +292,45 @@ const styles = StyleSheet.create({
     color: '#94A3B8',
     fontSize: 14,
     fontWeight: '500',
+  },
+  divider: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    marginVertical: 24,
+  },
+  dividerLine: {
+    flex: 1,
+    height: 1,
+    backgroundColor: '#334155',
+  },
+  dividerText: {
+    color: '#64748B',
+    fontSize: 14,
+    marginHorizontal: 16,
+    fontWeight: '500',
+  },
+  socialButton: {
+    backgroundColor: 'rgba(30, 41, 59, 0.5)',
+    borderWidth: 1,
+    borderColor: '#334155',
+    borderRadius: 16,
+    paddingVertical: 16,
+    marginBottom: 12,
+  },
+  socialButtonContent: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    gap: 12,
+  },
+  socialButtonText: {
+    color: '#FFF',
+    fontSize: 16,
+    fontWeight: '600',
+  },
+  googleIcon: {
+    fontSize: 20,
+    fontWeight: 'bold',
+    color: '#FFF',
   },
 });

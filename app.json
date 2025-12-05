@@ -43,7 +43,8 @@
         {
           "cameraPermission": "Allow CardSnap AI to access your camera to scan business cards."
         }
-      ]
+      ],
+      "@react-native-google-signin/google-signin"
     ],
     "extra": {
       "eas": {
