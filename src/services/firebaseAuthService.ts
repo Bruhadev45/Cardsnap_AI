@@ -14,12 +14,22 @@ import {
 } from 'firebase/auth';
 import { auth } from './firebaseConfig';
 import { User } from '../types';
-import { GoogleSignin } from '@react-native-google-signin/google-signin';
 
-// Configure Google Sign-In
-GoogleSignin.configure({
-  webClientId: process.env.EXPO_PUBLIC_FIREBASE_WEB_CLIENT_ID, // From Firebase Console
-});
+// Import Google Sign-In conditionally
+let GoogleSignin: any = null;
+try {
+  GoogleSignin = require('@react-native-google-signin/google-signin').GoogleSignin;
+
+  // Configure Google Sign-In only if module is available
+  if (GoogleSignin && process.env.EXPO_PUBLIC_FIREBASE_WEB_CLIENT_ID) {
+    GoogleSignin.configure({
+      webClientId: process.env.EXPO_PUBLIC_FIREBASE_WEB_CLIENT_ID,
+    });
+  }
+} catch (error) {
+  // Google Sign-In requires native build - this is expected in Expo Go
+  // Silently fail - error will be shown to user when they try to use it
+}
 
 // Convert Firebase User to our User type
 const convertFirebaseUser = (firebaseUser: FirebaseUser): User => {
@@ -143,19 +153,33 @@ export const onAuthStateChange = (
 
 // Google Sign-In
 export const signInWithGoogle = async (): Promise<User> => {
+  // Check if Google Sign-In is available
+  if (!GoogleSignin) {
+    throw new Error(
+      'Google Sign-In is not available. Please run "npx expo prebuild" and rebuild the app to enable this feature.'
+    );
+  }
+
   try {
     // Check if device supports Google Play services
     await GoogleSignin.hasPlayServices({ showPlayServicesUpdateDialog: true });
-    
+
     // Sign in with Google
-    const { idToken } = await GoogleSignin.signIn();
-    
+    const response = await GoogleSignin.signIn();
+
+    // Get ID token from response
+    const idToken = response.data?.idToken;
+
+    if (!idToken) {
+      throw new Error('No ID token received from Google');
+    }
+
     // Create Firebase credential
     const googleCredential = GoogleAuthProvider.credential(idToken);
-    
+
     // Sign in to Firebase
     const userCredential = await signInWithCredential(auth, googleCredential);
-    
+
     return convertFirebaseUser(userCredential.user);
   } catch (error: any) {
     console.error('Google Sign-In error:', error);
