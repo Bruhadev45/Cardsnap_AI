@@ -7,7 +7,10 @@ A React Native mobile application for scanning business cards using AI, built wi
 - 📸 **Camera-based business card scanning** - Capture front and back of business cards
 - 🤖 **AI-powered OCR** - Extract contact information using Gemini 2.0 Flash via FastRouter
 - ☁️ **Cloud Storage** - Firebase Firestore for contact data (no images stored)
-- 🔐 **User Authentication** - Secure email/password authentication
+- 🔐 **Multi-method Authentication**
+  - ✉️ Email/Password authentication
+  - 🔵 Google Sign-In (requires native build)
+  - 📱 Phone/SMS authentication (requires Firebase Blaze Plan)
 - 💬 **AI Assistant** - Intelligent chatbot with knowledge of your contacts and web search capabilities
 - 🔍 **Advanced Search** - Multi-field search (name, company, email, phone, job title)
 - 🔀 **Smart Sorting** - Sort by name, company, or date (6 options)
@@ -45,9 +48,13 @@ npm install
 
 4. Set up Firebase:
    - Create a Firebase project at https://console.firebase.google.com
-   - Enable Email/Password authentication in Firebase Console
+   - Enable authentication methods in Firebase Console:
+     - Email/Password (required)
+     - Google Sign-In (optional, for native builds)
+     - Phone authentication (optional, requires Blaze Plan)
    - Create a Firestore database
    - Copy your Firebase config values to `.env` file
+   - For Google Sign-In: Download `google-services.json` (Android) and `GoogleService-Info.plist` (iOS)
 
 5. Configure AI API Key:
    - **Option A (Recommended)**: Use OpenAI API
@@ -77,6 +84,9 @@ EXPO_PUBLIC_FIREBASE_STORAGE_BUCKET=your-project.firebasestorage.app
 EXPO_PUBLIC_FIREBASE_MESSAGING_SENDER_ID=your-messaging-sender-id
 EXPO_PUBLIC_FIREBASE_APP_ID=your-app-id
 EXPO_PUBLIC_FIREBASE_MEASUREMENT_ID=your-measurement-id
+
+# Google Sign-In (optional, for native builds only)
+EXPO_PUBLIC_FIREBASE_WEB_CLIENT_ID=your-web-client-id.apps.googleusercontent.com
 ```
 
 **Important:** 
@@ -86,7 +96,7 @@ EXPO_PUBLIC_FIREBASE_MEASUREMENT_ID=your-measurement-id
 
 ## Running the App
 
-### Development
+### Development (Expo Go)
 
 Start the Expo development server:
 ```bash
@@ -97,15 +107,35 @@ Then scan the QR code with:
 - **iOS**: Expo Go app from the App Store
 - **Android**: Expo Go app from Google Play Store
 
-### iOS Simulator
+**Available in Expo Go:**
+- ✅ Email/Password authentication
+- ✅ All scanning and AI features
+- ✅ Contact management and export
+- ❌ Google Sign-In (requires native build)
+- ❌ Phone authentication (requires native build)
+
+### Native Build (For Google Sign-In)
+
+**Step 1: Generate native code**
 ```bash
-npm run ios
+npx expo prebuild
 ```
 
-### Android Emulator
+**Step 2: Run on iOS Simulator**
 ```bash
-npm run android
+npx expo run:ios
 ```
+
+**Step 3: Run on Android Emulator**
+```bash
+npx expo run:android
+```
+
+**Now Available:**
+- ✅ Email/Password authentication
+- ✅ Google Sign-In
+- ✅ Phone authentication (with Blaze Plan)
+- ✅ All features
 
 ## Project Structure
 
@@ -113,33 +143,55 @@ npm run android
 mobile-app/
 ├── src/
 │   ├── screens/              # Screen components
-│   │   ├── AuthScreen.tsx         # Login/Register
+│   │   ├── AuthScreen.tsx         # Login/Register (Email, Google, Phone)
+│   │   ├── PhoneAuthScreen.tsx    # Phone authentication flow
 │   │   ├── HomeScreen.tsx         # Welcome screen
 │   │   ├── DashboardScreen.tsx    # Contact list & management
 │   │   ├── ScannerScreen.tsx      # Camera scanning
 │   │   └── AssistantScreen.tsx    # AI chatbot
 │   ├── services/             # Business logic & APIs
 │   │   ├── firebaseConfig.ts      # Firebase configuration
-│   │   ├── firebaseAuthService.ts # Authentication
+│   │   ├── firebaseAuthService.ts # Multi-method authentication
 │   │   ├── firebaseStorageService.ts # Contact data storage
 │   │   ├── geminiService.ts       # AI OCR & Assistant
 │   │   └── exportService.ts       # CSV/Excel/VCard export
 │   └── types/               # TypeScript interfaces
 │       └── index.ts
+├── assets/                  # Images and logos
 ├── App.tsx                  # Main app component
-├── app.json                # Expo configuration
-└── package.json            # Dependencies
+├── app.json                 # Expo configuration
+├── eas.json                 # EAS Build configuration
+├── package.json             # Dependencies
+└── .env.example             # Environment variables template
 ```
 
 ## Key Features Explained
 
-### 1. Business Card Scanning
+### 1. Authentication Methods
+
+**Email/Password** (Works in Expo Go)
+- Traditional email and password sign up/login
+- No additional configuration needed
+- Works immediately after Firebase setup
+
+**Google Sign-In** (Requires native build)
+- One-tap Google authentication
+- Requires `npx expo prebuild` and native build
+- Download Firebase config files (`google-services.json`, `GoogleService-Info.plist`)
+- Enable Google provider in Firebase Console
+
+**Phone/SMS Authentication** (Requires native build + Blaze Plan)
+- Phone number with SMS verification code
+- Requires Firebase Blaze Plan (paid, but includes 10K free verifications/month)
+- reCAPTCHA verification for security
+
+### 2. Business Card Scanning
 - Capture front and optional back of business card
 - AI extracts: name, job title, company, email, phone, website, address
 - Manual review before saving
 - Duplicate detection alerts
 
-### 2. AI Assistant
+### 3. AI Assistant
 - Access via floating chatbot button
 - Has complete knowledge of all scanned contacts
 - Can answer questions about your network
@@ -150,20 +202,20 @@ mobile-app/
   - "What's the latest news about AI?"
   - "Find contacts in San Francisco"
 
-### 3. Export & Integration
+### 4. Export & Integration
 - **CSV Export**: Universal format for spreadsheets
 - **Excel Export**: With UTF-8 BOM for Excel compatibility
 - **VCard Export**: Add individual contacts to phone
 - **Quick Actions**: Tap phone to call, tap email to compose
 
-### 4. Cloud Sync
+### 5. Cloud Sync
 - Contact data stored in Firebase Firestore (names, emails, phones, etc.)
 - Images NOT stored in cloud (used only for OCR, then discarded)
-- Secure user authentication
+- Secure user authentication with multiple methods
 - Data isolated per user
 - Real-time sync across devices
 
-### 5. Search, Sort & Filter
+### 6. Search, Sort & Filter
 - **Search**: Multi-field instant search (name, company, email, phone, job title)
 - **Sort**: 6 sorting options (Name A-Z/Z-A, Company A-Z/Z-A, Date Newest/Oldest)
 - **Filter**: Filter by company with checkbox selection
@@ -273,6 +325,26 @@ The app requires camera permissions configured in `app.json`:
 - Firebase Storage NOT needed (images not stored)
 - Restart Expo server after updating `.env`
 
+### Google Sign-In errors
+**Error: "RNGoogleSignin could not be found"**
+- This is normal in Expo Go - Google Sign-In requires native build
+- Run `npx expo prebuild` to generate native code
+- Then run `npx expo run:ios` or `npx expo run:android`
+
+**Error: "Google Sign-In is not available"**
+- Ensure you've run `npx expo prebuild`
+- Download `google-services.json` and `GoogleService-Info.plist` from Firebase
+- Place files in project root
+- Add `EXPO_PUBLIC_FIREBASE_WEB_CLIENT_ID` to `.env`
+- Enable Google provider in Firebase Console
+
+### Phone authentication errors
+**Error: "auth/billing-not-enabled"**
+- Phone auth requires Firebase Blaze Plan (paid tier)
+- Upgrade at Firebase Console → Upgrade
+- Free tier includes 10K SMS verifications/month
+- Alternative: Use Email/Password or Google Sign-In
+
 ### Environment variables not loading
 - Ensure file is named exactly `.env` (not `.env.txt`)
 - All variables must start with `EXPO_PUBLIC_` prefix
@@ -288,8 +360,6 @@ The app requires camera permissions configured in `app.json`:
 - Clear cache: `expo start -c`
 - Reinstall dependencies: `rm -rf node_modules && npm install`
 - Ensure all Expo packages are compatible: `npx expo install --fix`
-
-For more detailed troubleshooting, see [TROUBLESHOOTING.md](./TROUBLESHOOTING.md)
 
 ## Switching to Local Storage
 
